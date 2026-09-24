@@ -1,7 +1,5 @@
 import { SAMPLING_PROFILES } from "./profiles.js"
 
-const VALUE_EPSILON = 1e-3
-
 const FIELD_NAMES = Object.freeze({
   temperature: "temperature",
   topP: "topP",
@@ -199,15 +197,11 @@ function resolveProfile(profile) {
     modes: Object.fromEntries(Object.entries(profile.modes).map(([mode, values]) => [mode, { ...values }])),
   }
   const temperature = readNumericEnv(profile.env.temperature)
-  const baseline = readNumericEnv(profile.env.baseline)
 
   if (temperature !== undefined) {
     for (const values of Object.values(resolved.modes)) {
       if (values.temperature !== undefined) values.temperature = temperature
     }
-  }
-  if (baseline !== undefined) {
-    resolved.baselines = { ...resolved.baselines, temperature: baseline }
   }
 
   return resolved
@@ -220,10 +214,8 @@ function selectMode(profile, model, output) {
   return mode
 }
 
-function isDefaultValue(current, baseline) {
-  if (current === undefined || current === null) return true
-  if (baseline === undefined || !Number.isFinite(baseline)) return false
-  return typeof current === "number" && Math.abs(current - baseline) < VALUE_EPSILON
+function isUnsetValue(current) {
+  return current === undefined || current === null
 }
 
 function canApplyField(model, profile, field, value) {
@@ -248,8 +240,7 @@ export function applyProfile(model, output) {
     const target = values[field]
     if (!canApplyField(model, profile, field, target)) continue
 
-    const baseline = profile.baselines?.[outputField]
-    if (!isDefaultValue(output[outputField], baseline)) continue
+    if (!isUnsetValue(output[outputField])) continue
 
     output[outputField] = target
     changed = true

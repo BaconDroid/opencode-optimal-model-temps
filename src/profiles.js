@@ -31,7 +31,6 @@ export const SAMPLING_PROFILES = Object.freeze([
       nonThinking: thinking(0.35),
       any: thinking(0.35),
     },
-    baselines: { temperature: 1 },
     env: {
       temperature: "OPENCODE_GEMINI3_TEMPERATURE",
       baseline: "OPENCODE_GEMINI3_BASELINE",
@@ -151,7 +150,6 @@ export const SAMPLING_PROFILES = Object.freeze([
       thinking: thinking(1.0, 0.95),
       nonThinking: nonThinking(0.6, 0.95),
     },
-    baselines: { temperature: 1.0, topP: 0.95 },
     evidence: "B",
     sources: [
       official(
@@ -173,7 +171,6 @@ export const SAMPLING_PROFILES = Object.freeze([
       thinking: thinking(1.0, 0.95),
       nonThinking: nonThinking(0.6, 0.95),
     },
-    baselines: { temperature: 1.0, topP: 0.95 },
     evidence: "B",
     sources: [
       official(
@@ -190,7 +187,6 @@ export const SAMPLING_PROFILES = Object.freeze([
       thinking: thinking(1.0, 0.95),
       nonThinking: nonThinking(1.0, 0.95),
     },
-    baselines: { temperature: 1.0, topP: 0.95 },
     evidence: "B",
     sources: [
       official(
@@ -227,7 +223,6 @@ export const SAMPLING_PROFILES = Object.freeze([
       thinking: thinking(1.0, 0.95),
       nonThinking: nonThinking(1.0, 0.95),
     },
-    baselines: { temperature: 1.0, topP: 0.95 },
     evidence: "B",
     sources: [
       official(

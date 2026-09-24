@@ -108,7 +108,7 @@ test("applies Kimi K2.x family values in both modes", () => {
     assert.equal(thinkingOutput.topP, 0.95)
     assert.equal(thinkingOutput.topK, undefined)
 
-    const instantOutput = makeOutput({ temperature: 1.0, topP: 0.95 })
+    const instantOutput = makeOutput()
     assert.equal(
       applyProfile(
         makeModel(modelID, { modelOptions: { enable_thinking: false } }),
@@ -418,14 +418,18 @@ test("applies Go-specific Kimi values in thinking mode", () => {
   }
 })
 
-test("keeps the legacy Gemini environment overrides", () => {
+test("keeps the legacy Gemini environment overrides for unset fields", () => {
   process.env.OPENCODE_GEMINI3_TEMPERATURE = "0.42"
   process.env.OPENCODE_GEMINI3_BASELINE = "1"
 
-  const output = makeOutput({ temperature: 1 })
   const model = makeModel("gemini-3-pro", { provider: "google" })
-  assert.equal(applyProfile(model, output), true)
-  assert.equal(output.temperature, 0.42)
+  const unsetOutput = makeOutput()
+  assert.equal(applyProfile(model, unsetOutput), true)
+  assert.equal(unsetOutput.temperature, 0.42)
+
+  const explicitOutput = makeOutput({ temperature: 1 })
+  assert.equal(applyProfile(model, explicitOutput), false)
+  assert.equal(explicitOutput.temperature, 1)
 })
 
 test("exports a working chat.params hook", async () => {
