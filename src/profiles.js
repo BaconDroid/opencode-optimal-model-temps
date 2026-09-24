@@ -33,7 +33,6 @@ export const SAMPLING_PROFILES = Object.freeze([
     },
     env: {
       temperature: "OPENCODE_GEMINI3_TEMPERATURE",
-      baseline: "OPENCODE_GEMINI3_BASELINE",
     },
     evidence: "D",
     sources: [
