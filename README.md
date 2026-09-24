@@ -10,7 +10,7 @@ The plugin hooks `chat.params` and manages only:
 
 It does not change reasoning effort, thinking mode, output-token limits, tools, prompts, context compaction, or model routing.
 
-Thinking and non-thinking models can have separate presets. The plugin reads the mode selected by OpenCode; it never enables or disables thinking itself. If a two-mode model has no detectable mode, the plugin leaves the request unchanged. `OPENCODE_SAMPLING_MODE=thinking` or `OPENCODE_SAMPLING_MODE=nonThinking` can be used as an explicit override.
+Thinking and non-thinking models can have separate presets. The plugin reads the mode selected by OpenCode; it never enables or disables thinking itself. When no mode field is present, the request is treated as non-thinking; an explicitly present `undefined` value is treated as thinking. If the selected mode has no preset, the fields remain unchanged. `OPENCODE_SAMPLING_MODE=thinking` or `OPENCODE_SAMPLING_MODE=nonThinking` can be used as an explicit override.
 
 ## Installation
 
@@ -26,7 +26,7 @@ Add the plugin to `~/.config/opencode/opencode.json`:
 
 ## Profiles
 
-The active profiles are family-first: GLM-5.x, Qwen3 Max, DeepSeek V4, Kimi K2.6/K2.7/K3, MiniMax M2/M3, MiMo V2.5, and MiMo V2 Flash. The original Gemini 3 Pro rule remains available for compatibility.
+The active profiles are family-first: GLM-5.x, Qwen3.x, DeepSeek V4.x, Kimi K2.x/K3.x, MiniMax M2.x/M3.x, and MiMo V2.x. Route-specific subfamilies are retained only when a provider constraint or probe requires them. The original Gemini 3 Pro rule remains available for compatibility.
 
 Model-specific entries are retained only as safety overrides when a live OpenCode Go probe rejects the family value or when a model has a documented thinking-only constraint. The registry deliberately does not auto-apply values for hosted Grok models; their evidence remains conflicting or fixed-benchmark-only.
 
