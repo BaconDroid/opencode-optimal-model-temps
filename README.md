@@ -34,12 +34,11 @@ See [docs/sampling-profiles.md](docs/sampling-profiles.md) for the complete tabl
 
 ## Precedence
 
-The plugin preserves explicit sampling values. It only fills an unset field or replaces a documented provider baseline. A missing or unsupported field is never invented.
+The plugin preserves explicit sampling values and only fills fields that are unset. A defined value is never replaced, even when it equals a provider baseline. A missing or unsupported field is never invented.
 
-For the legacy Gemini profile, these environment variables remain supported:
+For the legacy Gemini profile, this environment variable remains supported:
 
 - `OPENCODE_GEMINI3_TEMPERATURE`: target temperature, default `0.35`.
-- `OPENCODE_GEMINI3_BASELINE`: recognized baseline, default `1`.
 
 ## Development
 

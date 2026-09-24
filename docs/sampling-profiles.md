@@ -16,7 +16,7 @@ A model-specific profile is retained only when a live route probe demonstrates a
 
 The plugin never changes the thinking mode. It only reads the mode already selected by OpenCode or the provider. When no mode field is present, the request is treated as non-thinking; an explicitly present mode value of `undefined` is treated as thinking. If the selected mode has no preset for a model family, its fields remain unchanged. Use `OPENCODE_SAMPLING_MODE=thinking` or `OPENCODE_SAMPLING_MODE=nonThinking` when the provider does not expose the mode clearly.
 
-Explicit user or agent sampling values always win. The plugin only fills an unset field or replaces a documented provider baseline. `top_k` is never invented.
+Explicit user or agent sampling values always win. The plugin only fills fields that are unset; it never replaces a defined value, even when it equals a provider baseline. `top_k` is never invented.
 
 ## Active family profiles
 
@@ -31,7 +31,7 @@ Values were checked on 2026-09-24. `P` means `top_p`; `T` means `temperature`.
 | `kimi-k2.x` | `T=1.0`, `P=0.95` | `T=0.6`, `P=0.95` | B | [K2.6 guide](https://platform.kimi.ai/docs/guide/kimi-k2-6-quickstart), [K2.7 guide](https://platform.kimi.ai/docs/guide/kimi-k2-7-code-quickstart) |
 | `kimi-k3.x` | `T=1.0`, `P=0.95` | `T=0.6`, `P=0.95` | B | [K3 model card](https://github.com/MoonshotAI/Kimi-K3) |
 | `MiniMax M2.x` | `T=1.0`, `P=0.95` | `T=1.0`, `P=0.95` (sampling fallback only) | B | [M2 card](https://github.com/MiniMax-AI/MiniMax-M2), [M2.1 card](https://github.com/MiniMax-AI/MiniMax-M2.1), [M2.5 card](https://github.com/MiniMax-AI/MiniMax-M2.5), [M2.7 card](https://github.com/MiniMax-AI/MiniMax-M2.7), [hosted API](https://platform.minimax.io/docs/api-reference/text-anthropic-api) |
-| `MiniMax M3.x` | `T=1.0`, `P=0.95` (`enabled`/`adaptive`/`true`/other non-empty values) | `T=1.0`, `P=0.95` (`disabled`/`false`/unset) | B | [M3 card](https://github.com/MiniMax-AI/MiniMax-M3), [hosted API](https://platform.minimax.io/docs/api-reference/text-anthropic-api) |
+| `MiniMax M3.x` | `T=1.0`, `P=0.95` (`enabled`/`adaptive`/`true`/other non-empty values) | `T=1.0`, `P=0.95` (`disabled`/`false`/unset) | B | [M3 card](https://github.com/MiniMax-AI/MiniMax-M3), [hosted API](https://platform.minimax.io/docs/api-reference/text-openai-api) |
 | `MiMo V2.x` | `T=1.0`, `P=0.95` | `T=1.0`, `P=0.95` | B | [V2.5 recipe](https://github.com/sgl-project/sglang-jax/blob/11248f5adbd3633a4b21bbc8af01483edd727bfd/docs/cookbook/autoregressive/Xiaomi/MiMo-V2.5-Pro.md), [official V2 Flash guide](https://github.com/XiaomiMiMo/MiMo-V2-Flash/blob/b4eaae40d3728657ff7f0f9397dcce3c9ab3d3b7/README.md) |
 
 ## Safety overrides
@@ -67,9 +67,8 @@ A route-specific probe can lower confidence or add a safety override, but it doe
 
 ```text
 explicit user/agent value
--> known provider baseline replacement
 -> family profile value
 -> provider default
 ```
 
-The OpenCode hook cannot always distinguish an explicit value equal to a provider default from that default itself. Baselines are used only when explicitly documented or inherited from the original plugin behavior.
+The plugin fills only fields that are unset. It does not replace a defined value that happens to equal a provider baseline, and it never invents `top_k`.

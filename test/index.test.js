@@ -10,7 +10,6 @@ import {
 const ENV_KEYS = [
   "OPENCODE_SAMPLING_MODE",
   "OPENCODE_GEMINI3_TEMPERATURE",
-  "OPENCODE_GEMINI3_BASELINE",
 ]
 
 function makeModel(modelID, options = {}) {
@@ -164,7 +163,7 @@ test("keeps Kimi Code thinking-only on OpenCode Go", () => {
   assert.equal(thinkingOutput.temperature, 1.0)
   assert.equal(thinkingOutput.topP, 0.95)
 
-  const nonThinkingOutput = makeOutput({ temperature: 1.0, topP: 0.95 })
+  const nonThinkingOutput = makeOutput()
   assert.equal(
     applyProfile(
       makeModel("kimi-k2.7-code", {
@@ -175,8 +174,8 @@ test("keeps Kimi Code thinking-only on OpenCode Go", () => {
     ),
     false,
   )
-  assert.equal(nonThinkingOutput.temperature, 1.0)
-  assert.equal(nonThinkingOutput.topP, 0.95)
+  assert.equal(nonThinkingOutput.temperature, undefined)
+  assert.equal(nonThinkingOutput.topP, undefined)
 })
 
 test("applies separate GLM-5 hybrid profiles", () => {
@@ -418,9 +417,8 @@ test("applies Go-specific Kimi values in thinking mode", () => {
   }
 })
 
-test("keeps the legacy Gemini environment overrides for unset fields", () => {
+test("supports the legacy Gemini temperature override for unset fields", () => {
   process.env.OPENCODE_GEMINI3_TEMPERATURE = "0.42"
-  process.env.OPENCODE_GEMINI3_BASELINE = "1"
 
   const model = makeModel("gemini-3-pro", { provider: "google" })
   const unsetOutput = makeOutput()
