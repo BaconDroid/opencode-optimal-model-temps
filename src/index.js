@@ -13,9 +13,10 @@ const MODE_ALIASES = Object.freeze({
   think: "thinking",
   reasoning: "thinking",
   enabled: "thinking",
+  1: "thinking",
+  true: "thinking",
   enable: "thinking",
   on: "thinking",
-  adaptive: "thinking",
   always: "thinking",
   low: "thinking",
   medium: "thinking",
@@ -59,6 +60,40 @@ const MODE_SCALAR_KEYS = new Set([
   "think",
 ])
 
+const FALLBACK_MODE_KEYS = new Set([
+  "thinking",
+  "thinking_config",
+  "thinking_configuration",
+  "thinkingconfig",
+  "reasoning",
+  "reasoning_config",
+  "reasoningconfig",
+  "enable_thinking",
+  "enablethinking",
+  "thinking_mode",
+  "thinkingmode",
+  "reasoning_effort",
+  "reasoningeffort",
+  "reasoning_mode",
+  "reasoningmode",
+  "effort",
+  "think",
+  "type",
+  "status",
+  "mode",
+  "level",
+])
+
+function isEmptyModeValue(value) {
+  if (value == null) return true
+  if (typeof value === "string") return value.trim().length === 0
+  if (typeof value === "number") return value === 0
+  if (typeof value === "boolean") return value === false
+  if (Array.isArray(value)) return value.length === 0
+  if (typeof value === "object") return Object.values(value).every(isEmptyModeValue)
+  return false
+}
+
 function normalizeKey(value) {
   return String(value ?? "")
     .toLowerCase()
@@ -67,6 +102,11 @@ function normalizeKey(value) {
 
 function normalizeMode(value) {
   if (typeof value === "boolean") return value ? "thinking" : "nonThinking"
+  if (typeof value === "number") {
+    if (value === 1) return "thinking"
+    if (value === 0) return "nonThinking"
+    return undefined
+  }
   if (typeof value !== "string") return undefined
   return MODE_ALIASES[normalizeKey(value)]
 }
@@ -82,7 +122,11 @@ function providerId(model) {
 function modeFromScalar(value, parentKey) {
   const key = normalizeKey(parentKey)
   if (MODE_SCALAR_KEYS.has(key) || key === "type" || key === "status" || key === "mode" || key === "level") {
-    return normalizeMode(value)
+    const mode = normalizeMode(value)
+    if (mode) return mode
+    if (value !== null && typeof value === "object") return undefined
+    if (value === undefined) return "thinking"
+    if (FALLBACK_MODE_KEYS.has(key) && !isEmptyModeValue(value)) return "thinking"
   }
   return undefined
 }
@@ -99,6 +143,7 @@ function detectModeFromValue(value, parentKey = "", depth = 0) {
       const found = detectModeFromValue(item, parentKey, depth + 1)
       if (found) return found
     }
+    if (FALLBACK_MODE_KEYS.has(normalizeKey(parentKey)) && value.length > 0) return "thinking"
     return undefined
   }
 
@@ -113,6 +158,7 @@ function detectModeFromValue(value, parentKey = "", depth = 0) {
     }
   }
 
+  if (FALLBACK_MODE_KEYS.has(normalizeKey(parentKey)) && !isEmptyModeValue(value)) return "thinking"
   return undefined
 }
 
@@ -168,16 +214,10 @@ function resolveProfile(profile) {
 }
 
 function selectMode(profile, model, output) {
-  const explicit = detectExplicitMode(model, output)
-  if (explicit) {
-    if (profile.alwaysThinking && explicit === "nonThinking") return undefined
-    if (profile.modes[explicit]) return explicit
-  }
-
-  if (profile.alwaysThinking) return profile.defaultMode ?? "thinking"
-  if (profile.defaultMode && profile.modes[profile.defaultMode]) return profile.defaultMode
+  const mode = detectExplicitMode(model, output) ?? "nonThinking"
+  if (profile.modes[mode]) return mode
   if (profile.modes.any) return "any"
-  return undefined
+  return mode
 }
 
 function isDefaultValue(current, baseline) {
@@ -219,7 +259,7 @@ export function applyProfile(model, output) {
 }
 
 export function detectSamplingMode(model, output) {
-  return detectExplicitMode(model, output)
+  return detectExplicitMode(model, output) ?? "nonThinking"
 }
 
 export const OptimalModelTemperaturesPlugin = async () => ({

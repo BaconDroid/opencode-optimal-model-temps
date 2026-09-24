@@ -63,52 +63,123 @@ test("detects thinking and non-thinking option shapes", () => {
     ),
     "nonThinking",
   )
-  assert.equal(detectSamplingMode(makeModel("kimi-k2.6"), makeOutput()), undefined)
+  assert.equal(
+    detectSamplingMode(makeModel("minimax-m3", { modelOptions: { thinking: true } }), makeOutput()),
+    "thinking",
+  )
+  assert.equal(
+    detectSamplingMode(makeModel("minimax-m3", { modelOptions: { thinking: false } }), makeOutput()),
+    "nonThinking",
+  )
+  assert.equal(
+    detectSamplingMode(makeModel("minimax-m3", { modelOptions: { thinking: 0 } }), makeOutput()),
+    "nonThinking",
+  )
+  assert.equal(
+    detectSamplingMode(makeModel("minimax-m3", { modelOptions: { thinking: { type: "custom" } } }), makeOutput()),
+    "thinking",
+  )
+  assert.equal(
+    detectSamplingMode(makeModel("kimi-k2.6", { modelOptions: { thinking: "adaptive" } }), makeOutput()),
+    "thinking",
+  )
+  assert.equal(
+    detectSamplingMode(makeModel("kimi-k2.6", { modelOptions: { thinking: 1 } }), makeOutput()),
+    "thinking",
+  )
+  assert.equal(
+    detectSamplingMode(makeModel("minimax-m3", { modelOptions: { thinking: undefined } }), makeOutput()),
+    "thinking",
+  )
+  assert.equal(detectSamplingMode(makeModel("kimi-k2.6"), makeOutput()), "nonThinking")
 })
 
-test("applies separate thinking and non-thinking Kimi K2.6 profiles", () => {
+test("applies Kimi K2.x family values in both modes", () => {
+  for (const modelID of ["kimi-k2.6", "kimi-k2.7"]) {
+    const thinkingOutput = makeOutput()
+    assert.equal(
+      applyProfile(
+        makeModel(modelID, { modelOptions: { reasoningEffort: "high" } }),
+        thinkingOutput,
+      ),
+      true,
+    )
+    assert.equal(thinkingOutput.temperature, 1.0)
+    assert.equal(thinkingOutput.topP, 0.95)
+    assert.equal(thinkingOutput.topK, undefined)
+
+    const instantOutput = makeOutput({ temperature: 1.0, topP: 0.95 })
+    assert.equal(
+      applyProfile(
+        makeModel(modelID, { modelOptions: { enable_thinking: false } }),
+        instantOutput,
+      ),
+      true,
+    )
+    assert.equal(instantOutput.temperature, 0.6)
+    assert.equal(instantOutput.topP, 0.95)
+    assert.equal(instantOutput.topK, undefined)
+  }
+})
+
+test("defaults MiniMax M3 to non-thinking when no mode is specified", () => {
+  const output = makeOutput()
+  assert.equal(applyProfile(makeModel("minimax-m3"), output), true)
+  assert.equal(output.temperature, 1.0)
+  assert.equal(output.topP, 0.95)
+})
+
+test("applies the same MiniMax M2.x values in both modes", () => {
+  for (const modelID of ["minimax-m2", "minimax-m2.1", "minimax-m2.5", "minimax-m2.7"]) {
+    const defaultOutput = makeOutput()
+    assert.equal(applyProfile(makeModel(modelID), defaultOutput), true)
+    assert.equal(defaultOutput.temperature, 1.0)
+    assert.equal(defaultOutput.topP, 0.95)
+
+    const nonThinkingOutput = makeOutput()
+    assert.equal(
+      applyProfile(
+        makeModel(modelID, { modelOptions: { thinking: { type: "disabled" } } }),
+        nonThinkingOutput,
+      ),
+      true,
+    )
+    assert.equal(nonThinkingOutput.temperature, 1.0)
+    assert.equal(nonThinkingOutput.topP, 0.95)
+  }
+})
+
+test("keeps Kimi Code thinking-only on OpenCode Go", () => {
   const thinkingOutput = makeOutput()
   assert.equal(
     applyProfile(
-      makeModel("kimi-k2.6", { modelOptions: { reasoningEffort: "high" } }),
+      makeModel("kimi-k2.7-code", {
+        provider: "opencode-go",
+        modelOptions: { reasoningEffort: "high" },
+      }),
       thinkingOutput,
     ),
     true,
   )
   assert.equal(thinkingOutput.temperature, 1.0)
   assert.equal(thinkingOutput.topP, 0.95)
-  assert.equal(thinkingOutput.topK, undefined)
 
-  const instantOutput = makeOutput({ temperature: 1.0, topP: 0.95 })
+  const nonThinkingOutput = makeOutput({ temperature: 1.0, topP: 0.95 })
   assert.equal(
     applyProfile(
-      makeModel("kimi-k2.6", { modelOptions: { enable_thinking: false } }),
-      instantOutput,
+      makeModel("kimi-k2.7-code", {
+        provider: "opencode-go",
+        modelOptions: { thinking: { type: "disabled" } },
+      }),
+      nonThinkingOutput,
     ),
-    true,
+    false,
   )
-  assert.equal(instantOutput.temperature, 0.6)
-  assert.equal(instantOutput.topP, 0.95)
-  assert.equal(instantOutput.topK, undefined)
+  assert.equal(nonThinkingOutput.temperature, 1.0)
+  assert.equal(nonThinkingOutput.topP, 0.95)
 })
 
-test("does not guess a mode for a two-mode profile", () => {
-  const output = makeOutput()
-  assert.equal(applyProfile(makeModel("minimax-m3"), output), false)
-  assert.equal(output.temperature, undefined)
-  assert.equal(output.topP, undefined)
-})
-
-test("does not guess a mode for the MiniMax family", () => {
-  for (const modelID of ["minimax-m2", "minimax-m2.5", "minimax-m2.7", "minimax-m3"]) {
-    const output = makeOutput()
-    assert.equal(applyProfile(makeModel(modelID), output), false)
-    assert.equal(output.temperature, undefined)
-    assert.equal(output.topP, undefined)
-  }
-})
-
-test("applies separate GLM-5 hybrid profiles outside OpenCode Go", () => {
+test("applies separate GLM-5 hybrid profiles", () => {
   for (const modelID of ["glm-5", "glm-5.1", "glm-5.2"]) {
     const thinkingOutput = makeOutput()
     assert.equal(
@@ -134,34 +205,37 @@ test("applies separate GLM-5 hybrid profiles outside OpenCode Go", () => {
   }
 })
 
-test("keeps GLM-5.3 thinking-only on every route", () => {
-  for (const provider of ["test-provider", "opencode-go"]) {
-    const thinkingOutput = makeOutput()
-    assert.equal(
-      applyProfile(
-        makeModel("glm-5.3", {
-          provider,
-          modelOptions: { reasoningEffort: "high" },
-        }),
-        thinkingOutput,
-      ),
-      true,
-    )
-    assert.equal(thinkingOutput.temperature, 1.0)
+test("defaults an unspecified mode to non-thinking when supported", () => {
+  const glmOutput = makeOutput()
+  assert.equal(applyProfile(makeModel("glm-5.1"), glmOutput), true)
+  assert.equal(glmOutput.temperature, 0.6)
 
-    const nonThinkingOutput = makeOutput()
-    assert.equal(
-      applyProfile(
-        makeModel("glm-5.3", {
-          provider,
-          modelOptions: { thinking: { type: "disabled" } },
-        }),
-        nonThinkingOutput,
-      ),
-      false,
-    )
-    assert.equal(nonThinkingOutput.temperature, undefined)
-  }
+  const kimiOutput = makeOutput()
+  assert.equal(applyProfile(makeModel("kimi-k3"), kimiOutput), true)
+  assert.equal(kimiOutput.temperature, 0.6)
+  assert.equal(kimiOutput.topP, 0.95)
+})
+
+test("applies GLM-5.3 family non-thinking values", () => {
+  const thinkingOutput = makeOutput()
+  assert.equal(
+    applyProfile(
+      makeModel("glm-5.3", { modelOptions: { reasoningEffort: "high" } }),
+      thinkingOutput,
+    ),
+    true,
+  )
+  assert.equal(thinkingOutput.temperature, 1.0)
+
+  const nonThinkingOutput = makeOutput()
+  assert.equal(
+    applyProfile(
+      makeModel("glm-5.3", { modelOptions: { thinking: { type: "disabled" } } }),
+      nonThinkingOutput,
+    ),
+    true,
+  )
+  assert.equal(nonThinkingOutput.temperature, 0.6)
 })
 
 test("keeps OpenCode Go GLM-5.x thinking-only", () => {
@@ -194,8 +268,8 @@ test("keeps OpenCode Go GLM-5.x thinking-only", () => {
   }
 })
 
-test("applies Qwen Max sampling values when fields are absent", () => {
-  for (const modelID of ["qwen3.7-max", "qwen3.8-max"]) {
+test("applies Qwen3.x family sampling values when fields are absent", () => {
+  for (const modelID of ["qwen3.5", "qwen3.7-max", "qwen3.8-max", "qwen3-coder"]) {
     for (const modelOptions of [{ reasoningEffort: "high" }, { thinking: { type: "disabled" } }]) {
       const output = makeOutput()
       assert.equal(applyProfile(makeModel(modelID, { modelOptions }), output), true)
@@ -206,7 +280,7 @@ test("applies Qwen Max sampling values when fields are absent", () => {
   }
 })
 
-test("applies DeepSeek V4 values in both modes", () => {
+test("applies DeepSeek V4.x family values in both modes", () => {
   const nonThinkingOutput = makeOutput()
   assert.equal(
     applyProfile(
@@ -230,24 +304,59 @@ test("applies DeepSeek V4 values in both modes", () => {
   assert.equal(thinkingOutput.topP, 1.0)
 })
 
-test("applies Kimi K3 non-thinking values on the Go route", () => {
-  const output = makeOutput()
-  assert.equal(
-    applyProfile(
-      makeModel("kimi-k3", {
-        provider: "opencode-go",
-        modelOptions: { thinking: { type: "disabled" } },
-      }),
-      output,
-    ),
-    true,
-  )
-  assert.equal(output.temperature, 0.6)
-  assert.equal(output.topP, 0.95)
+test("matches DeepSeek V4.x aliases", () => {
+  for (const modelID of ["deepseek-v4", "deepseek-v4.1", "deepseek-v4-pro"]) {
+    const output = makeOutput()
+    assert.equal(
+      applyProfile(
+        makeModel(modelID, { modelOptions: { reasoningEffort: "high" } }),
+        output,
+      ),
+      true,
+    )
+    assert.equal(output.temperature, 1.0)
+    assert.equal(output.topP, 1.0)
+  }
 })
 
-test("applies the MiniMax family values", () => {
-  for (const modelID of ["minimax-m2", "minimax-m2.5", "minimax-m2.7", "minimax-m3"]) {
+test("applies Kimi K3.x family non-thinking values on the Go route", () => {
+  for (const modelID of ["kimi-k3", "kimi-k3.1"]) {
+    const output = makeOutput()
+    assert.equal(
+      applyProfile(
+        makeModel(modelID, {
+          provider: "opencode-go",
+          modelOptions: { thinking: { type: "disabled" } },
+        }),
+        output,
+      ),
+      true,
+    )
+    assert.equal(output.temperature, 0.6)
+    assert.equal(output.topP, 0.95)
+  }
+})
+
+test("uses recognized and fallback MiniMax M3 modes", () => {
+  for (const mode of ["adaptive", "disabled", "enabled", "true", "1", "custom"]) {
+    const output = makeOutput()
+    assert.equal(
+      applyProfile(
+        makeModel("minimax-m3", {
+          provider: "opencode-go",
+          modelOptions: { thinking: { type: mode } },
+        }),
+        output,
+      ),
+      true,
+    )
+    assert.equal(output.temperature, 1.0)
+    assert.equal(output.topP, 0.95)
+  }
+})
+
+test("applies MiMo V2.x family values in both modes", () => {
+  for (const modelID of ["mimo-v2.5", "mimo-v2-flash"]) {
     const thinkingOutput = makeOutput()
     assert.equal(
       applyProfile(
@@ -267,38 +376,7 @@ test("applies the MiniMax family values", () => {
       ),
       true,
     )
-    assert.equal(nonThinkingOutput.temperature, 0.1)
-    assert.equal(nonThinkingOutput.topP, 0.95)
-  }
-})
-
-test("splits MiMo V2.5 and V2 Flash presets", () => {
-  const cases = [
-    ["mimo-v2.5", 1.0, 0.7],
-    ["mimo-v2-flash", 0.3, 0.8],
-  ]
-
-  for (const [modelID, thinkingTemperature, nonThinkingTemperature] of cases) {
-    const thinkingOutput = makeOutput()
-    assert.equal(
-      applyProfile(
-        makeModel(modelID, { modelOptions: { reasoningEffort: "high" } }),
-        thinkingOutput,
-      ),
-      true,
-    )
-    assert.equal(thinkingOutput.temperature, thinkingTemperature)
-    assert.equal(thinkingOutput.topP, 0.95)
-
-    const nonThinkingOutput = makeOutput()
-    assert.equal(
-      applyProfile(
-        makeModel(modelID, { modelOptions: { thinking: { type: "disabled" } } }),
-        nonThinkingOutput,
-      ),
-      true,
-    )
-    assert.equal(nonThinkingOutput.temperature, nonThinkingTemperature)
+    assert.equal(nonThinkingOutput.temperature, 1.0)
     assert.equal(nonThinkingOutput.topP, 0.95)
   }
 })
@@ -326,10 +404,13 @@ test("skips temperature when the model capability is disabled", () => {
   assert.equal(output.topP, 0.95)
 })
 
-test("applies the Go-compatible Kimi sampling values", () => {
+test("applies Go-specific Kimi values in thinking mode", () => {
   for (const modelID of ["kimi-k3", "kimi-k2.7-code"]) {
     const output = makeOutput()
-    const model = makeModel(modelID, { provider: "opencode-go" })
+    const model = makeModel(modelID, {
+      provider: "opencode-go",
+      modelOptions: { reasoningEffort: "high" },
+    })
     assert.equal(applyProfile(model, output), true)
     assert.equal(output.temperature, 1.0)
     assert.equal(output.topP, 0.95)
