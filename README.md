@@ -34,7 +34,7 @@ See [docs/sampling-profiles.md](docs/sampling-profiles.md) for the complete tabl
 
 ## Precedence
 
-The plugin preserves explicit sampling values and only fills fields that are unset. A defined value is never replaced, even when it equals a provider baseline. A missing or unsupported field is never invented.
+The plugin preserves explicit sampling values and only fills fields that are unset. A defined value is never replaced, even when it equals a provider baseline. The plugin does not add fields without an applicable profile value.
 
 For the legacy Gemini profile, this environment variable remains supported:
 
