@@ -177,10 +177,13 @@ function findProfile(model) {
   const id = modelId(model)
   if (!id) return undefined
 
-  return SAMPLING_PROFILES.find((profile) => {
+  const matches = SAMPLING_PROFILES.filter((profile) => {
     if (profile.providers && !profile.providers.some((allowed) => allowed.toLowerCase() === provider)) return false
     return profile.match.test(id)
   })
+
+  // A model-specific rule (scope: "model") takes precedence; family rules are a fallback only.
+  return matches.find((profile) => profile.scope === "model") ?? matches.find((profile) => profile.scope !== "model")
 }
 
 function readNumericEnv(name) {

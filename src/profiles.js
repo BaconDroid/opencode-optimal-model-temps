@@ -21,9 +21,14 @@ const nonThinking = (temperature, topP, topK = undefined) => ({
   topK,
 })
 
+// `scope: "model"` marks a model- or route-specific rule. The resolver applies the first
+// matching model-scope rule and only falls back to family-scope rules (entries without a
+// `scope`) when no model-scope rule matches. Family entries therefore do not need to be
+// ordered after model entries.
 export const SAMPLING_PROFILES = Object.freeze([
   {
     id: "gemini-3-pro",
+    scope: "model",
     match: /gemini-3-pro/,
     providers: ["google"],
     modes: {
@@ -50,6 +55,7 @@ export const SAMPLING_PROFILES = Object.freeze([
   },
   {
     id: "glm-5-opencode-go",
+    scope: "model",
     match: /^glm-5(?:$|[-.])/,
     providers: ["opencode-go"],
     modes: {
@@ -86,22 +92,67 @@ export const SAMPLING_PROFILES = Object.freeze([
     ],
   },
   {
-    id: "qwen3-family",
-    match: /^qwen3(?:$|[-.])/,
+    id: "qwen3.5-family",
+    scope: "model",
+    match: /^qwen3\.5(?:$|[-.])/,
     modes: {
-      any: thinking(1.0, 0.95),
+      thinking: thinking(0.6, 0.95),
+      nonThinking: nonThinking(0.7, 0.8),
     },
     evidence: "B",
     sources: [
       official(
-        "qwen3.8-max-blog",
-        "https://qwen.ai/blog?id=qwen3.8",
-        "Official Qwen3.8 Max release and benchmark guidance uses temperature 1.0; the hosted Max baseline uses top_p 0.95. These values are applied to the Qwen3.x family by user policy.",
+        "qwen3.5-397b-card",
+        "https://huggingface.co/Qwen/Qwen3.5-397B-A17B",
+        "Official Qwen3.5 card: thinking mode temperature=0.6, top_p=0.95, top_k=20; instruct/non-thinking temperature=0.7, top_p=0.8, top_k=20. Qwen3.5 uses thinking temperature 0.6, unlike the later Qwen3.6/3.8 generation at 1.0, so it is a model-specific exception.",
+      ),
+    ],
+  },
+  {
+    id: "qwen3.8-max",
+    scope: "model",
+    match: /^qwen3\.8-max(?:$|[-.])/,
+    modes: {
+      thinking: thinking(1.0, 0.95),
+      nonThinking: nonThinking(1.0, 0.95),
+    },
+    evidence: "B",
+    sources: [
+      official(
+        "qwen3.8-2.4t-card",
+        "https://huggingface.co/Qwen/Qwen3.8-2.4T-A95B",
+        "Official Qwen3.8-2.4T-A95B card requires thinking mode for all interactions (thinking cannot be disabled) and lists temperature=1.0, top_p=0.95, top_k=20. Because the model is thinking-only, the same values are reused for the non-thinking slot without changing the provider mode.",
       ),
       independent(
         "qwen3.8-max-sampling-card",
         "https://github.com/xbtlin/ai-berkshire/blob/836f0bf51ffa8f30c22bf730255ab8d64de56b91/reports/%E5%A4%A7%E6%A8%A1%E5%9E%8B%E5%85%A8%E6%99%AF%E5%AF%B9%E6%AF%94-20260906/evidence/Qwen__Qwen3.8-2.4T-A95B__README.md",
-        "Archived Qwen model-card guidance records temperature 1.0, top_p 0.95, and top_k 20; this plugin only applies temperature and top_p.",
+        "Archived copy of the Qwen3.8-2.4T-A95B card records the same temperature 1.0, top_p 0.95, and top_k 20 for the thinking-only model.",
+      ),
+    ],
+  },
+  {
+    id: "qwen3-family",
+    match: /^qwen3(?:$|[-.])/,
+    modes: {
+      thinking: thinking(1.0, 0.95),
+      nonThinking: nonThinking(0.7, 0.8),
+    },
+    evidence: "B",
+    sources: [
+      official(
+        "qwen3.6-27b-card",
+        "https://huggingface.co/Qwen/Qwen3.6-27B",
+        "Official Qwen3.6 card: thinking mode for general tasks temperature=1.0, top_p=0.95, top_k=20 (precise-coding tasks use 0.6); instruct/non-thinking temperature=0.7, top_p=0.80, top_k=20.",
+      ),
+      official(
+        "qwen3.8-27b-card",
+        "https://huggingface.co/Qwen/Qwen3.8-27B",
+        "Official Qwen3.8-27B card and generation_config.json give thinking temperature=1.0, top_p=0.95, top_k=20 and instruct/non-thinking temperature=0.7, top_p=0.80, top_k=20.",
+      ),
+      official(
+        "qwen3.8-flash-next-card",
+        "https://huggingface.co/Qwen/Qwen3.8-Flash-Next-FP8",
+        "Official Qwen3.8-Flash-Next card repeats the same mode split: thinking 1.0/0.95/20, non-thinking 0.7/0.80/20.",
       ),
     ],
   },
@@ -112,17 +163,23 @@ export const SAMPLING_PROFILES = Object.freeze([
       thinking: thinking(1.0, 1.0),
       nonThinking: nonThinking(1.0, 1.0),
     },
-    evidence: "B",
+    evidence: "A",
     sources: [
       official(
         "deepseek-v4-blog",
         "https://huggingface.co/blog/deepseekv4",
         "DeepSeek V4 benchmark guidance uses temperature 1.0 and top_p 1.0; direct Go probes accepted both fields in thinking and non-thinking modes, while the upstream documentation says thinking may ignore them semantically.",
       ),
+      independent(
+        "nvidia-nim-deepseek-v4",
+        "https://docs.nvidia.com/nim/large-language-models/latest/get-started/advanced/get-started-deepseek-v4-pro-0813.html",
+        "Independent NVIDIA NIM documentation confirms the checkpoint defaults temperature=1.0 and top_p=1.0, and adds a workload caveat: for agentic workloads it states that DeepSeek recommends top_p=0.95. The family keeps 1.0 pending a decision on that caveat.",
+      ),
     ],
   },
   {
     id: "kimi-k2.7-opencode-go",
+    scope: "model",
     match: /^kimi-k2\.7-code(?:$|[-.])/,
     providers: ["opencode-go"],
     modes: {
@@ -149,7 +206,7 @@ export const SAMPLING_PROFILES = Object.freeze([
       thinking: thinking(1.0, 0.95),
       nonThinking: nonThinking(0.6, 0.95),
     },
-    evidence: "B",
+    evidence: "A",
     sources: [
       official(
         "kimi-k2.6-quickstart",
@@ -160,6 +217,11 @@ export const SAMPLING_PROFILES = Object.freeze([
         "kimi-k2.7-code-quickstart",
         "https://platform.kimi.ai/docs/guide/kimi-k2-7-code-quickstart",
         "Official K2.7 Code guidance is used as K2.x family context; the Go route has a separate thinking-only safety override.",
+      ),
+      independent(
+        "dell-kimi-k2.6-card",
+        "https://dell.huggingface.co/models/moonshotai/Kimi-K2.6",
+        "Independent Dell Enterprise Hub card reproduces the K2.6 values: temperature 1.0 for Thinking mode, 0.6 for Instant mode, and top_p 0.95.",
       ),
     ],
   },
@@ -175,7 +237,7 @@ export const SAMPLING_PROFILES = Object.freeze([
       official(
         "kimi-k3-readme",
         "https://github.com/MoonshotAI/Kimi-K3",
-        "Official Kimi K3 benchmark conditions use temperature 1.0 and top_p 0.95.",
+        "Official Kimi K3 benchmark conditions use temperature 1.0 with top_p 0.95 for single-step tasks and top_p 1.0 for agentic tasks; the family keeps 0.95 (the API-fixed value) and does not adopt the agentic benchmark top_p.",
       ),
     ],
   },
@@ -254,6 +316,102 @@ export const SAMPLING_PROFILES = Object.freeze([
         "mimo-v2-flash-readme",
         "https://github.com/XiaomiMiMo/MiMo-V2-Flash/blob/b4eaae40d3728657ff7f0f9397dcce3c9ab3d3b7/README.md",
         "Official MiMo-V2-Flash guidance uses top_p 0.95 and task-specific temperatures; those task values are not used as separate mode profiles.",
+      ),
+    ],
+  },
+  {
+    id: "grok-4-family",
+    match: /^grok-4(?:$|\.)/,
+    modes: {
+      thinking: thinking(0.7, 0.95),
+      nonThinking: nonThinking(0.7, 0.95),
+    },
+    evidence: "B",
+    sources: [
+      official(
+        "xai-best-practices",
+        "https://docs.x.ai/developers/model-capabilities/text/best-practices",
+        "Official xAI best-practices guide recommends temperature 0.7 and top_p 0.95 for Grok text and reasoning models and warns that quality drops far from these values. The guide does not distinguish reasoning from non-reasoning, so both modes use the same values.",
+      ),
+      official(
+        "xai-build-settings",
+        "https://docs.x.ai/build/settings.md",
+        "xAI's own Grok Build default configuration ships temperature 0.7 and top_p 0.95 for grok-4.7, matching the best-practices recommendation.",
+      ),
+    ],
+  },
+  {
+    id: "grok-build",
+    scope: "model",
+    match: /^grok-build/,
+    modes: {
+      thinking: thinking(0.7, 0.95),
+      nonThinking: nonThinking(0.7, 0.95),
+    },
+    evidence: "B",
+    sources: [
+      official(
+        "xai-best-practices",
+        "https://docs.x.ai/developers/model-capabilities/text/best-practices",
+        "Official xAI best-practices guide recommends temperature 0.7 and top_p 0.95 for Grok models; grok-build has no separate published value, so the generic Grok recommendation is reused.",
+      ),
+    ],
+  },
+  {
+    id: "hy3-family",
+    match: /^hy3(?:$|[-.])/,
+    modes: {
+      thinking: thinking(0.9, 1.0),
+      nonThinking: nonThinking(0.9, 1.0),
+    },
+    evidence: "A",
+    sources: [
+      official(
+        "hunyuan-hy3-readme",
+        "https://github.com/Tencent-Hunyuan/Hy3",
+        "Official Hy3 quickstart states recommended parameters temperature 0.9 and top_p 1.0 and documents reasoning_effort values no_think, low, and high. The sampling recommendation is the same for direct and reasoning modes.",
+      ),
+      independent(
+        "vllm-recipes-hy3",
+        "https://recipes.vllm.ai/tencent/Hy3",
+        "The independent vLLM Recipes page configures temperature=0.9 and top_p=1.0, corroborating the official recommendation.",
+      ),
+    ],
+  },
+  {
+    id: "hy4-family",
+    match: /^hy4(?:$|[-.])/,
+    modes: {
+      thinking: thinking(0.9, 1.0),
+      nonThinking: nonThinking(0.9, 1.0),
+    },
+    evidence: "A",
+    sources: [
+      official(
+        "hunyuan-hy4-readme",
+        "https://github.com/Tencent-Hunyuan/Hy4-preview",
+        "Official Hy4-preview quickstart states recommended parameters temperature 0.9 and top_p 1.0; reasoning defaults to high with no_think available for direct responses.",
+      ),
+      independent(
+        "vllm-recipes-hy4",
+        "https://recipes.vllm.ai/tencent/Hy4-preview",
+        "The independent vLLM Recipes page states that Tencent recommends temperature=0.9 and top_p=1.0, corroborating the official recommendation.",
+      ),
+    ],
+  },
+  {
+    id: "longcat-2-family",
+    match: /^longcat-2(?:$|[-.])/,
+    modes: {
+      thinking: thinking(undefined, 0.95),
+      nonThinking: nonThinking(undefined, 0.95),
+    },
+    evidence: "B",
+    sources: [
+      official(
+        "longcat-model-params",
+        "https://longcat.ai/platform/docs/api/model-params",
+        "Official LongCat API documentation lists a top_p default of 0.95 and marks temperature as fixed and server-overridden (1.0 with thinking on, 0.7 with thinking off). Only top_p is applied; temperature is left to the provider rather than forced.",
       ),
     ],
   },

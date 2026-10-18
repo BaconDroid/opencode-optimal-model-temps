@@ -26,15 +26,15 @@ Add the plugin to `~/.config/opencode/opencode.json`:
 
 ## Profiles
 
-The active profiles are family-first: GLM-5.x, Qwen3.x, DeepSeek V4.x, Kimi K2.x/K3.x, MiniMax M2.x/M3.x, and MiMo V2.x. Route-specific subfamilies are retained only when a provider constraint or probe requires them. The original Gemini 3 Pro rule remains available for compatibility.
+The active profiles are family-first: GLM-5.x, Qwen3.x, DeepSeek V4.x, Kimi K2.x/K3.x, MiniMax M2.x/M3.x, MiMo V2.x, Grok 4.x, `grok-build`, Tencent Hunyuan Hy3, Tencent Hunyuan Hy4, and Meituan LongCat 2.x. Route-specific subfamilies are retained only when a provider constraint or probe requires them. The original Gemini 3 Pro rule remains available for compatibility.
 
-Model-specific entries are retained only as safety overrides when a live OpenCode Go probe rejects the family value or when a model has a documented thinking-only constraint. The registry deliberately does not auto-apply values for hosted Grok models; their evidence remains conflicting or fixed-benchmark-only.
+Model-specific entries are retained only as safety overrides when a live OpenCode Go probe rejects the family value or when a model has a documented thinking-only constraint. The registry deliberately registers no profile for hosted Claude, StepFun, or Meta Llama models, because Claude rejects non-default sampling while StepFun's hosted API and Meta Llama publish no usable recommendation.
 
 See [docs/sampling-profiles.md](docs/sampling-profiles.md) for the complete table, source URLs, evidence levels, route-specific limitations, and the policy for adding new values.
 
 ## Precedence
 
-The plugin preserves explicit sampling values and only fills fields that are unset. A defined value is never replaced, even when it equals a provider baseline. The plugin does not add fields without an applicable profile value.
+Profile selection is two-tier: a model-specific rule (`scope: "model"`) always wins, and family rules are a fallback used only when no model-specific rule matches — independent of entry order in the registry. The plugin then preserves explicit sampling values and only fills fields that are unset. A defined value is never replaced, even when it equals a provider baseline. The plugin does not add fields without an applicable profile value.
 
 For the legacy Gemini profile, this environment variable remains supported:
 

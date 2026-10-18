@@ -267,16 +267,67 @@ test("keeps OpenCode Go GLM-5.x thinking-only", () => {
   }
 })
 
-test("applies Qwen3.x family sampling values when fields are absent", () => {
-  for (const modelID of ["qwen3.5", "qwen3.7-max", "qwen3.8-max", "qwen3-coder"]) {
-    for (const modelOptions of [{ reasoningEffort: "high" }, { thinking: { type: "disabled" } }]) {
-      const output = makeOutput()
-      assert.equal(applyProfile(makeModel(modelID, { modelOptions }), output), true)
-      assert.equal(output.temperature, 1.0)
-      assert.equal(output.topP, 0.95)
-      assert.equal(output.topK, undefined)
-    }
+test("applies Qwen3.x mode-specific values when fields are absent", () => {
+  const cases = [
+    ["qwen3.5", { reasoningEffort: "high" }, 0.6, 0.95],
+    ["qwen3.5", { thinking: { type: "disabled" } }, 0.7, 0.8],
+    ["qwen3.6-plus", { reasoningEffort: "high" }, 1.0, 0.95],
+    ["qwen3.6-plus", { thinking: { type: "disabled" } }, 0.7, 0.8],
+    ["qwen3.8-flash", { reasoningEffort: "high" }, 1.0, 0.95],
+    ["qwen3.8-flash", { thinking: { type: "disabled" } }, 0.7, 0.8],
+    ["qwen3-coder", { thinking: { type: "disabled" } }, 0.7, 0.8],
+  ]
+  for (const [modelID, modelOptions, temperature, topP] of cases) {
+    const output = makeOutput()
+    assert.equal(applyProfile(makeModel(modelID, { modelOptions }), output), true)
+    assert.equal(output.temperature, temperature)
+    assert.equal(output.topP, topP)
+    assert.equal(output.topK, undefined)
   }
+})
+
+test("reuses the same Qwen3.8 Max values for both mode slots", () => {
+  for (const modelOptions of [{ reasoningEffort: "high" }, { thinking: { type: "disabled" } }, {}]) {
+    const output = makeOutput()
+    assert.equal(applyProfile(makeModel("qwen3.8-max", { modelOptions }), output), true)
+    assert.equal(output.temperature, 1.0)
+    assert.equal(output.topP, 0.95)
+  }
+})
+
+test("prefers a model rule and falls back to the family rule", () => {
+  // Model rule wins over the broader family rule.
+  const qwen35 = makeOutput()
+  assert.equal(
+    applyProfile(makeModel("qwen3.5-plus", { modelOptions: { reasoningEffort: "high" } }), qwen35),
+    true,
+  )
+  assert.equal(qwen35.temperature, 0.6)
+
+  // Family rule applies when no model rule matches.
+  const qwen36 = makeOutput()
+  assert.equal(
+    applyProfile(makeModel("qwen3.6-plus", { modelOptions: { reasoningEffort: "high" } }), qwen36),
+    true,
+  )
+  assert.equal(qwen36.temperature, 1.0)
+
+  // Route-specific model rule overrides the family on its route only.
+  const glmGo = makeOutput()
+  assert.equal(
+    applyProfile(
+      makeModel("glm-5.2", { provider: "opencode-go", modelOptions: { thinking: { type: "disabled" } } }),
+      glmGo,
+    ),
+    false,
+  )
+
+  const glmOther = makeOutput()
+  assert.equal(
+    applyProfile(makeModel("glm-5.2", { provider: "other", modelOptions: { thinking: { type: "disabled" } } }), glmOther),
+    true,
+  )
+  assert.equal(glmOther.temperature, 0.6)
 })
 
 test("applies DeepSeek V4.x family values in both modes", () => {
@@ -377,6 +428,59 @@ test("applies MiMo V2.x family values in both modes", () => {
     )
     assert.equal(nonThinkingOutput.temperature, 1.0)
     assert.equal(nonThinkingOutput.topP, 0.95)
+  }
+})
+
+test("applies Grok 4.x family values in both modes", () => {
+  for (const modelID of ["grok-4.5", "grok-4.6", "grok-4.7", "grok-4.20-0309-reasoning"]) {
+    for (const modelOptions of [{ reasoningEffort: "high" }, { enable_thinking: false }]) {
+      const output = makeOutput()
+      assert.equal(applyProfile(makeModel(modelID, { modelOptions }), output), true)
+      assert.equal(output.temperature, 0.7)
+      assert.equal(output.topP, 0.95)
+      assert.equal(output.topK, undefined)
+    }
+  }
+})
+
+test("applies grok-build values in both modes", () => {
+  for (const modelOptions of [{ reasoningEffort: "high" }, { enable_thinking: false }]) {
+    const output = makeOutput()
+    assert.equal(applyProfile(makeModel("grok-build-0.1", { modelOptions }), output), true)
+    assert.equal(output.temperature, 0.7)
+    assert.equal(output.topP, 0.95)
+    assert.equal(output.topK, undefined)
+  }
+})
+
+test("applies Hunyuan Hy3 and Hy4 values separately in both modes", () => {
+  for (const modelID of ["hy3", "hy4-preview"]) {
+    for (const modelOptions of [{ reasoningEffort: "high" }, { thinking: { type: "disabled" } }]) {
+      const output = makeOutput()
+      assert.equal(applyProfile(makeModel(modelID, { modelOptions }), output), true)
+      assert.equal(output.temperature, 0.9)
+      assert.equal(output.topP, 1.0)
+    }
+  }
+})
+
+test("applies LongCat top_p and leaves server-managed temperature unset", () => {
+  for (const modelID of ["longcat-2.0", "longcat-2.5-preview-free"]) {
+    for (const modelOptions of [{ reasoningEffort: "high" }, { thinking: { type: "disabled" } }]) {
+      const output = makeOutput()
+      assert.equal(applyProfile(makeModel(modelID, { modelOptions }), output), true)
+      assert.equal(output.temperature, undefined)
+      assert.equal(output.topP, 0.95)
+    }
+  }
+})
+
+test("does not match near-miss or unsupported model ids", () => {
+  for (const modelID of ["grok", "grok-", "grok-3", "hy2", "hy5", "hy35", "longcat", "longcat-1", "claude-sonnet-5-5", "step-5-preview"]) {
+    const output = makeOutput()
+    assert.equal(applyProfile(makeModel(modelID), output), false)
+    assert.equal(output.temperature, undefined)
+    assert.equal(output.topP, undefined)
   }
 })
 
