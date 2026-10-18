@@ -330,6 +330,37 @@ test("prefers a model rule and falls back to the family rule", () => {
   assert.equal(glmOther.temperature, 0.6)
 })
 
+test("matches vendor-namespaced gateway ids", () => {
+  const cases = [
+    ["deepseek/deepseek-v4.1-flash", { reasoningEffort: "high" }, 1.0, 1.0],
+    ["z-ai/glm-5.3-flash", { reasoningEffort: "high" }, 1.0, undefined],
+    ["zai-org/GLM-5.3", { reasoningEffort: "high" }, 1.0, undefined],
+    ["Qwen/Qwen3.8-Max", { reasoningEffort: "high" }, 1.0, 0.95],
+    ["xai/grok-4.7", { enable_thinking: false }, 0.7, 0.95],
+    ["tencent/hy3-paid", { reasoningEffort: "high" }, 0.9, 1.0],
+    ["meituan/LongCat-2.0", { reasoningEffort: "high" }, undefined, 0.95],
+    ["MiniMaxAI/MiniMax-M3", { reasoningEffort: "high" }, 1.0, 0.95],
+    ["moonshotai/Kimi-K3", { reasoningEffort: "high" }, 1.0, 0.95],
+  ]
+  for (const [modelID, modelOptions, temperature, topP] of cases) {
+    const output = makeOutput()
+    assert.equal(
+      applyProfile(makeModel(modelID, { provider: "commandcode", modelOptions }), output),
+      true,
+      `${modelID} should match a profile`,
+    )
+    assert.equal(output.temperature, temperature)
+    assert.equal(output.topP, topP)
+  }
+
+  // Namespaced ids with no profile are still left untouched.
+  for (const modelID of ["poolside/laguna-s-2.1-free", "meta/muse-spark-1.3", "stepfun/Step-5-Preview", "sakana/fugu-ultra"]) {
+    const output = makeOutput()
+    assert.equal(applyProfile(makeModel(modelID, { provider: "commandcode" }), output), false)
+    assert.equal(output.temperature, undefined)
+  }
+})
+
 test("applies DeepSeek V4.x family values in both modes", () => {
   const nonThinkingOutput = makeOutput()
   assert.equal(

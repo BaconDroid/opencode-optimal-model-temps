@@ -14,6 +14,8 @@ The registry prefers one sampling profile per model family. A value supported by
 
 A model-specific profile is retained only when a live route probe demonstrates a capability or rejection that must not be lost. These are safety overrides, not alternative quality claims.
 
+Model ids may be vendor-namespaced by a gateway (for example `commandcode/z-ai/glm-5.3-flash`). A profile matches both the full id and the vendor-stripped basename, so the same family rule applies across providers.
+
 The plugin never changes the thinking mode. It only reads the mode already selected by OpenCode or the provider. When no mode field is present, the request is treated as non-thinking; an explicitly present mode value of `undefined` is treated as thinking. If the selected mode has no preset for a model family, its fields remain unchanged. Use `OPENCODE_SAMPLING_MODE=thinking` or `OPENCODE_SAMPLING_MODE=nonThinking` when the provider does not expose the mode clearly.
 
 Explicit user or agent sampling values always win. The plugin only fills fields that are unset; it never replaces a defined value, even when it equals a provider baseline. `top_k` is never invented.

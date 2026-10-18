@@ -30,6 +30,8 @@ The active profiles are family-first: GLM-5.x, Qwen3.x, DeepSeek V4.x, Kimi K2.x
 
 Model-specific entries are retained only as safety overrides when a live OpenCode Go probe rejects the family value or when a model has a documented thinking-only constraint. The registry deliberately registers no profile for hosted Claude, StepFun, or Meta Llama models, because Claude rejects non-default sampling while StepFun's hosted API and Meta Llama publish no usable recommendation.
 
+Hosted gateways can namespace model ids by vendor (for example `commandcode/z-ai/glm-5.3-flash`). A profile matches both the full id and the vendor-stripped basename, so the same family rule applies across providers.
+
 See [docs/sampling-profiles.md](docs/sampling-profiles.md) for the complete table, source URLs, evidence levels, route-specific limitations, and the policy for adding new values.
 
 ## Precedence

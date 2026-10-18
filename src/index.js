@@ -172,14 +172,22 @@ function detectExplicitMode(model, output) {
   return undefined
 }
 
+function modelIdAliases(id) {
+  const slash = id.lastIndexOf("/")
+  return slash === -1 ? [id] : [id, id.slice(slash + 1)]
+}
+
 function findProfile(model) {
   const provider = providerId(model)
   const id = modelId(model)
   if (!id) return undefined
 
+  // Hosted gateways namespace ids as "<vendor>/<model>" (e.g. "z-ai/glm-5.3-flash").
+  // Match both the full id and the vendor-stripped basename.
+  const aliases = modelIdAliases(id)
   const matches = SAMPLING_PROFILES.filter((profile) => {
     if (profile.providers && !profile.providers.some((allowed) => allowed.toLowerCase() === provider)) return false
-    return profile.match.test(id)
+    return aliases.some((candidate) => profile.match.test(candidate))
   })
 
   // A model-specific rule (scope: "model") takes precedence; family rules are a fallback only.
