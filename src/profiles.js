@@ -178,10 +178,9 @@ export const SAMPLING_PROFILES = Object.freeze([
     ],
   },
   {
-    id: "kimi-k2.7-opencode-go",
+    id: "kimi-k2.7-code",
     scope: "model",
     match: /^kimi-k2\.7-code(?:$|[-.])/,
-    providers: ["opencode-go"],
     modes: {
       thinking: thinking(1.0, 0.95),
     },
@@ -190,12 +189,12 @@ export const SAMPLING_PROFILES = Object.freeze([
       official(
         "kimi-k2.7-code-quickstart",
         "https://platform.kimi.ai/docs/guide/kimi-k2-7-code-quickstart",
-        "Official K2.7 Code quickstart and thinking-mode documentation.",
+        "Official K2.7 Code quickstart fixes temperature at 1.0 and top_p at 0.95 and states the model errors if thinking is disabled, so this rule is thinking-only on every provider and never fills the non-thinking slot.",
       ),
       independent(
         "kimi-k2.7-opencode-constraints",
         "https://github.com/langgenius/dify-official-plugins/blob/f6b4a6a945b4e5909d7c9ceb4c593505f1a3238d/models/opencode-go/models/llm/llm.py",
-        "Independent OpenCode Go provider forces temperature 1 and top_p 0.95 because the gateway rejects disabled thinking for K2.7 Code.",
+        "Independent OpenCode Go provider forces temperature 1 and top_p 0.95 for K2.7 Code, consistent with the model-wide thinking-only constraint.",
       ),
     ],
   },

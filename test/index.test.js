@@ -148,34 +148,38 @@ test("applies the same MiniMax M2.x values in both modes", () => {
   }
 })
 
-test("keeps Kimi Code thinking-only on OpenCode Go", () => {
-  const thinkingOutput = makeOutput()
-  assert.equal(
-    applyProfile(
-      makeModel("kimi-k2.7-code", {
-        provider: "opencode-go",
-        modelOptions: { reasoningEffort: "high" },
-      }),
-      thinkingOutput,
-    ),
-    true,
-  )
-  assert.equal(thinkingOutput.temperature, 1.0)
-  assert.equal(thinkingOutput.topP, 0.95)
+test("keeps Kimi K2.7 Code thinking-only on every provider", () => {
+  const cases = [
+    ["kimi-k2.7-code", "opencode-go"],
+    ["moonshotai/Kimi-K2.7-Code", "commandcode"],
+    ["moonshotai/Kimi-K2.7-Code-Highspeed", "commandcode"],
+  ]
 
-  const nonThinkingOutput = makeOutput()
-  assert.equal(
-    applyProfile(
-      makeModel("kimi-k2.7-code", {
-        provider: "opencode-go",
-        modelOptions: { thinking: { type: "disabled" } },
-      }),
-      nonThinkingOutput,
-    ),
-    false,
-  )
-  assert.equal(nonThinkingOutput.temperature, undefined)
-  assert.equal(nonThinkingOutput.topP, undefined)
+  for (const [modelID, provider] of cases) {
+    const thinkingOutput = makeOutput()
+    assert.equal(
+      applyProfile(
+        makeModel(modelID, { provider, modelOptions: { reasoningEffort: "high" } }),
+        thinkingOutput,
+      ),
+      true,
+      `${modelID} should apply thinking values`,
+    )
+    assert.equal(thinkingOutput.temperature, 1.0)
+    assert.equal(thinkingOutput.topP, 0.95)
+
+    const nonThinkingOutput = makeOutput()
+    assert.equal(
+      applyProfile(
+        makeModel(modelID, { provider, modelOptions: { thinking: { type: "disabled" } } }),
+        nonThinkingOutput,
+      ),
+      false,
+      `${modelID} should not fill the non-thinking slot`,
+    )
+    assert.equal(nonThinkingOutput.temperature, undefined)
+    assert.equal(nonThinkingOutput.topP, undefined)
+  }
 })
 
 test("applies separate GLM-5 hybrid profiles", () => {

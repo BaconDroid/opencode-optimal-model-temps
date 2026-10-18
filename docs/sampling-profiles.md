@@ -48,7 +48,7 @@ Values were initially checked on 2026-09-24 and re-checked against corroborating
 These overrides are kept because the route probe demonstrated a different capability or rejection:
 
 - `opencode-go` currently rejects disabled thinking for the GLM-5.x aliases, including GLM-5.1, GLM-5.2, and GLM-5.3. The `glm-5-opencode-go` subfamily applies only `T=1.0` in thinking mode.
-- `kimi-k2.7-code` on `opencode-go` rejects disabled thinking. The family non-thinking value is not applied on that route.
+- `kimi-k2.7-code` uses a fixed `T=1.0`, `P=0.95` and errors if thinking is disabled (Moonshot docs), so the model-specific rule is thinking-only on every provider and its non-thinking slot is never filled.
 - `kimi-k3` on `opencode-go` accepted `T=0.6`, `P=0.95` with thinking disabled in a direct probe.
 - MiniMax M2.x remains thinking-only in the hosted API. The non-thinking entry only supplies the same sampling values when a route exposes that mode; it does not enable or disable thinking.
 - MiniMax M3 treats `thinking.type=enabled`, `thinking.type=adaptive`, `true`, and other non-empty mode values as thinking; `thinking.type=disabled`, `false`, or an unset mode are non-thinking. The plugin never changes the thinking field.
