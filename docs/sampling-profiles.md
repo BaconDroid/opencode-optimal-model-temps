@@ -3,8 +3,8 @@
 This plugin changes only three request fields:
 
 - `temperature`
-- `top_p` (`output.topP` in the OpenCode hook)
-- `top_k` (`output.topK` in the OpenCode hook)
+- `top_p` (`topP` in the request options; `output.topP` on the V1 hook)
+- `top_k` (`topK` in the request options; `output.topK` on the V1 hook)
 
 It does not change reasoning effort, thinking mode, output-token limits, tools, prompts, context compaction, model routing, or provider credentials.
 
